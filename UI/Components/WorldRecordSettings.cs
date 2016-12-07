@@ -32,6 +32,16 @@ namespace LiveSplit.UI.Components
 
         public LayoutMode Mode { get; set; }
 
+        public WorldRecord.UI.Components.WorldRecordComponent Component { get; set; }
+        public bool OverrideGame { get; set; }
+        public bool OverrideCategory { get; set; }
+        public string OverrideGameName { get; set; }
+        public string OverrideCategoryName { get; set; }
+        private bool OriginalOverrideGame { get; set; } = false;
+        private bool OriginalOverrideCategory { get; set; } = false;
+        private string OriginalOverrideGameName { get; set; }
+        private string OriginalOverrideCategoryName { get; set; }
+
         public WorldRecordSettings()
         {
             InitializeComponent();
@@ -48,6 +58,8 @@ namespace LiveSplit.UI.Components
             FilterVariables = false;
             FilterPlatform = false;
             FilterRegion = false;
+            OverrideGame = false;
+            OverrideCategory = false;
 
             chkOverrideTextColor.DataBindings.Add("Checked", this, "OverrideTextColor", false, DataSourceUpdateMode.OnPropertyChanged);
             btnTextColor.DataBindings.Add("BackColor", this, "TextColor", false, DataSourceUpdateMode.OnPropertyChanged);
@@ -59,6 +71,10 @@ namespace LiveSplit.UI.Components
             chkRegion.DataBindings.Add("Checked", this, "FilterRegion", false, DataSourceUpdateMode.OnPropertyChanged);
             chkPlatform.DataBindings.Add("Checked", this, "FilterPlatform", false, DataSourceUpdateMode.OnPropertyChanged);
             chkVariables.DataBindings.Add("Checked", this, "FilterVariables", false, DataSourceUpdateMode.OnPropertyChanged);
+            chkOrGame.DataBindings.Add("Checked", this, "OverrideGame", false, DataSourceUpdateMode.OnPropertyChanged);
+            chkOrCat.DataBindings.Add("Checked", this, "OverrideCategory", false, DataSourceUpdateMode.OnPropertyChanged);
+            tbGame.DataBindings.Add("Text", this, "OverrideGameName", false, DataSourceUpdateMode.OnPropertyChanged);
+            tbCategory.DataBindings.Add("Text", this, "OverrideCategoryName", false, DataSourceUpdateMode.OnPropertyChanged);
         }
 
         void chkOverrideTimeColor_CheckedChanged(object sender, EventArgs e)
@@ -75,6 +91,9 @@ namespace LiveSplit.UI.Components
         {
             chkOverrideTextColor_CheckedChanged(null, null);
             chkOverrideTimeColor_CheckedChanged(null, null);
+            chkOrGame_CheckedChanged(null, null);
+            chkOrCategory_CheckedChanged(null, null);
+
             if (Mode == LayoutMode.Horizontal)
             {
                 chkTwoRows.Enabled = false;
@@ -88,6 +107,11 @@ namespace LiveSplit.UI.Components
                 chkTwoRows.DataBindings.Add("Checked", this, "Display2Rows", false, DataSourceUpdateMode.OnPropertyChanged);
             }
             chkTwoRows_CheckedChanged(null, null);
+
+            OriginalOverrideCategory = OverrideCategory;
+            OriginalOverrideGame = OverrideGame;
+            OriginalOverrideCategoryName = OverrideCategoryName;
+            OriginalOverrideGameName = OverrideGameName;
         }
 
         void cmbGradientType_SelectedIndexChanged(object sender, EventArgs e)
@@ -113,6 +137,10 @@ namespace LiveSplit.UI.Components
             FilterRegion = SettingsHelper.ParseBool(element["FilterRegion"]);
             FilterPlatform = SettingsHelper.ParseBool(element["FilterPlatform"]);
             FilterVariables = SettingsHelper.ParseBool(element["FilterVariables"]);
+            OverrideGame = SettingsHelper.ParseBool(element["OverrideGame"]);
+            OverrideCategory = SettingsHelper.ParseBool(element["OverrideCategory"]);
+            OverrideGameName = SettingsHelper.ParseString(element["OverrideGameName"]);
+            OverrideCategoryName = SettingsHelper.ParseString(element["OverrideCategoryName"]);
         }
 
         public XmlNode GetSettings(XmlDocument document)
@@ -141,7 +169,11 @@ namespace LiveSplit.UI.Components
             SettingsHelper.CreateSetting(document, parent, "CenteredText", CenteredText) ^
             SettingsHelper.CreateSetting(document, parent, "FilterRegion", FilterRegion) ^
             SettingsHelper.CreateSetting(document, parent, "FilterPlatform", FilterPlatform) ^
-            SettingsHelper.CreateSetting(document, parent, "FilterVariables", FilterVariables);
+            SettingsHelper.CreateSetting(document, parent, "FilterVariables", FilterVariables) ^
+            SettingsHelper.CreateSetting(document, parent, "OverrideGame", OverrideGame) ^
+            SettingsHelper.CreateSetting(document, parent, "OverrideCategory", OverrideCategory) ^
+            SettingsHelper.CreateSetting(document, parent, "OverrideGameName", OverrideGameName) ^
+            SettingsHelper.CreateSetting(document, parent, "OverrideCategoryName", OverrideCategoryName);
         }
 
         private void ColorButtonClick(object sender, EventArgs e)
@@ -163,6 +195,38 @@ namespace LiveSplit.UI.Components
                 chkCenteredText.DataBindings.Clear();
                 chkCenteredText.DataBindings.Add("Checked", this, "CenteredText", false, DataSourceUpdateMode.OnPropertyChanged);
             }
+        }
+
+        private void chkOrGame_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkOrGame.Checked)
+                tbGame.Enabled = true;
+            else
+            {
+                tbGame.Enabled = false;
+                tbGame.Text = CurrentState.Run.GameName;
+            }
+        }
+
+        private void chkOrCategory_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkOrCat.Checked)
+                tbCategory.Enabled = true;
+            else
+            {
+                tbCategory.Enabled = false;
+                tbCategory.Text = CurrentState.Run.CategoryName;
+
+            }
+        }
+
+        private void WorldRecordSettings_Leave(object sender, EventArgs e)
+        {
+            if (OriginalOverrideGame != OverrideGame ||
+                OriginalOverrideCategory != OverrideCategory ||
+                OriginalOverrideGameName != OverrideGameName ||
+                OriginalOverrideCategoryName != OverrideCategoryName)
+                    Component.RefreshFromSettings();
         }
     }
 }

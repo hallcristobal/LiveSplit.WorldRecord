@@ -47,6 +47,7 @@ namespace LiveSplit.WorldRecord.UI.Components
         public float MinimumHeight => InternalComponent.MinimumHeight;
 
         public IDictionary<string, Action> ContextMenuControls => null;
+        
 
         public WorldRecordComponent(LiveSplitState state)
         {
@@ -61,7 +62,8 @@ namespace LiveSplit.WorldRecord.UI.Components
             InternalComponent = new InfoTextComponent("World Record", "-");
             Settings = new WorldRecordSettings()
             {
-                CurrentState = state
+                CurrentState = state,
+                Component = this
             };
         }
 
@@ -91,11 +93,33 @@ namespace LiveSplit.WorldRecord.UI.Components
                         else
                             emulatorFilter = EmulatorsFilter.NoEmulators;
                     }
+                    Leaderboard leaderboard = null;
+                    
+                    if(Settings.OverrideGame || Settings.OverrideCategory)
+                    {
+                        Game g = State.Run.Metadata.Game;
+                        Category category = State.Run.Metadata.Category;
 
-                    var leaderboard = Client.Leaderboards.GetLeaderboardForFullGameCategory(State.Run.Metadata.Game.ID, State.Run.Metadata.Category.ID, 
-                        top: 1,
-                        platformId: platformFilter, regionId: regionFilter, 
-                        emulatorsFilter: emulatorFilter, variableFilters: variableFilter);
+                        if(Settings.OverrideGame)
+                            g = new GamesClient(Client).SearchGameExact(Settings.OverrideGameName);
+                        if(Settings.OverrideCategory)
+                            category = SpeedrunCom.Client.Games.GetCategories(g.ID, embeds: new CategoryEmbeds(embedVariables: true))
+                                            .FirstOrDefault(x => x.Type == CategoryType.PerGame && x.Name == Settings.OverrideCategoryName);
+
+                        leaderboard = Client.Leaderboards.GetLeaderboardForFullGameCategory(g.ID, category.ID,
+                            top: 1,
+                            platformId: platformFilter, regionId: regionFilter,
+                            emulatorsFilter: emulatorFilter, variableFilters: variableFilter);
+
+                    }
+                    else
+                    {
+                        leaderboard = Client.Leaderboards.GetLeaderboardForFullGameCategory(State.Run.Metadata.Game.ID, State.Run.Metadata.Category.ID,
+                            top: 1,
+                            platformId: platformFilter, regionId: regionFilter,
+                            emulatorsFilter: emulatorFilter, variableFilters: variableFilter);
+
+                    }
 
                     if (leaderboard != null)
                     {
@@ -200,6 +224,11 @@ namespace LiveSplit.WorldRecord.UI.Components
                     InternalComponent.InformationValue = "-";
                 }
             }
+        }
+
+        public void RefreshFromSettings()
+        {
+            Task.Factory.StartNew(RefreshWorldRecord);
         }
 
         private TimeSpan? GetPBTime(Model.TimingMethod method)
